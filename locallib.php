@@ -301,8 +301,12 @@ function block_lw_courses_get_sorted_courses($showallcourses = false) {
     global $USER , $DB;
 
     $courses = block_lw_courses_get_my_courses($USER->id);
-    $mapping = $DB->get_records_menu('block_webshop_product' , [] ,'',
-        'course_id as id, locale_display_flag');
+    // A course can have more than one product (e.g. one per language), so group by course_id to
+    // keep the first column unique - get_records_menu() warns on duplicate keys otherwise.
+    $mapping = $DB->get_records_sql_menu('SELECT course_id, MAX(locale_display_flag) AS locale_display_flag
+                                            FROM {block_webshop_product}
+                                           WHERE deleted_at = 0
+                                        GROUP BY course_id');
     $site = get_site();
 
     if (array_key_exists($site->id, $courses)) {
