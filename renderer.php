@@ -49,10 +49,7 @@ class block_lw_courses_renderer extends plugin_renderer_base {
         // LearningWorks.
         $PAGE->requires->js(new moodle_url($CFG->wwwroot . '/blocks/lw_courses/js/custom.js'));
         $config = get_config('block_lw_courses');
-        if ($config->showcategories != BLOCKS_LW_COURSES_SHOWCATEGORIES_NONE) {
-            global $CFG;
-            require_once($CFG->libdir . '/coursecatlib.php');
-        }
+        // coursecatlib.php was removed in Moodle 4.x; core_course_category is autoloaded.
         $role = $DB->get_record('role', ['shortname' => 'editingteacher']);
         $ismovingcourse = false;
         $courseordernumber = 0;
@@ -128,7 +125,7 @@ class block_lw_courses_renderer extends plugin_renderer_base {
         $html .= html_writer::tag('div', '', ["class" => "hidden startgrid $courseclass", "grid-size" => $gridsplit]);
         $html .= html_writer::div('', 'box flush');
 
-        $allnames = get_all_user_name_fields(true, 'u');
+        $allnames = \core_user\fields::for_name()->get_sql('u', false, '', '', false)->selects;
         $fields = 'u.id, u.confirmed, u.username, ' . $allnames . ', ' .
             'u.maildisplay, u.mailformat, u.maildigest, u.email, u.emailstop, u.city, ' .
             'u.country, u.picture, u.idnumber, u.department, u.institution, ' .
@@ -229,12 +226,12 @@ class block_lw_courses_renderer extends plugin_renderer_base {
 
             if ($config->showcategories != BLOCKS_LW_COURSES_SHOWCATEGORIES_NONE) {
                 // List category parent or categories path here.
-                $currentcategory = coursecat::get($course->category, IGNORE_MISSING);
+                $currentcategory = core_course_category::get($course->category, IGNORE_MISSING);
                 if ($currentcategory !== null) {
                     $html .= html_writer::start_tag('div', ['class' => 'categorypath']);
                     if ($config->showcategories == BLOCKS_LW_COURSES_SHOWCATEGORIES_FULL_PATH) {
                         foreach ($currentcategory->get_parents() as $categoryid) {
-                            $category = coursecat::get($categoryid, IGNORE_MISSING);
+                            $category = core_course_category::get($categoryid, IGNORE_MISSING);
                             if ($category !== null) {
                                 $html .= $category->get_formatted_name() . ' / ';
                             }
@@ -404,7 +401,8 @@ class block_lw_courses_renderer extends plugin_renderer_base {
     protected function collapsible_region_start($classes, $id, $caption, $userpref = '', $default = false) {
         // Work out the initial state.
         if (!empty($userpref) and is_string($userpref)) {
-            user_preference_allow_ajax_update($userpref, PARAM_BOOL);
+            // user_preference_allow_ajax_update() was deprecated in Moodle 4.5; the collapsed
+            // state is still read from the user preference below.
             $collapsed = get_user_preferences($userpref, $default);
         } else {
             $collapsed = $default;
@@ -523,7 +521,7 @@ class block_lw_courses_renderer extends plugin_renderer_base {
         }
 
         // Where are the default at even?.
-        return print_error('error');
+        throw new \moodle_exception('error');
     }
 
     /**
@@ -564,7 +562,7 @@ class block_lw_courses_renderer extends plugin_renderer_base {
         }
 
         // Where are the default at even?.
-        return print_error('filenotreadable');
+        throw new \moodle_exception('filenotreadable');
     }
 
     /**
